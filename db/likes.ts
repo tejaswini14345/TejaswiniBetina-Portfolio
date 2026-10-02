@@ -1,0 +1,4 @@
+import { env } from "cloudflare:workers";
+function database(){if(!env.DB)throw new Error("Portfolio likes database unavailable");return env.DB;}
+export async function readLikes(visitorId:string){const db=database();const results=await db.batch<{count?:number;visitor_id?:string}>([db.prepare("SELECT COUNT(*) AS count FROM portfolio_likes"),db.prepare("SELECT visitor_id FROM portfolio_likes WHERE visitor_id = ?").bind(visitorId)]);return {count:Number(results[0].results[0]?.count??0),liked:results[1].results.length>0};}
+export async function setLike(visitorId:string,liked:boolean){const db=database();await (liked?db.prepare("INSERT OR IGNORE INTO portfolio_likes (visitor_id, created_at) VALUES (?, ?)").bind(visitorId,Date.now()):db.prepare("DELETE FROM portfolio_likes WHERE visitor_id = ?").bind(visitorId)).run();return readLikes(visitorId);}
